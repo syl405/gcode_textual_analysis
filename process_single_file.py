@@ -1,6 +1,7 @@
 #!/usr/bin/python
 import re
 #TO-DO: Handle autohoming commands (G28s)
+#TO-DO: Record filament length extruded during purge separately from filament deposited on part
 def process_single_file(fs):
 	'''Takes an NVPRO g-code file and outputs list of textual attributes. Also returns a naive estimate of print time based purely on moves.
 
@@ -148,5 +149,4 @@ def process_single_file(fs):
 
 		output['num_lines_gcode'] += 1
 		cur_line = fs.readline()
-		print output['num_lines_gcode']
 	return output
