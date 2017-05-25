@@ -36,7 +36,7 @@ def process_single_file(fs):
 			  'num_fan_off': 0, #ok
 			  'num_purges': 0, #ok
 			  'total_dwell_time': 0, #ok
-			  'naive_print_time': 0}
+			  'naive_print_time': 0} #ok
 
 	#Raft and print parameters
 	seam_position = 0
@@ -128,7 +128,7 @@ def process_single_file(fs):
 			else: #triangular profile
 				#cusp_speed = (motion_params['A']*cur_move_dist)^0.5 (for reference only, close form solution)
 				print_time_this_move = (2*cur_move_dist)/((motion_params['A']*cur_move_dist)^0.5)
-
+			output['naive_print_time'] += print_time_this_move
 		elif cur_line.startswith('M105 '): #temp check lines
 			output['num_temp_checks'] += 1
 		elif cur_line.startswith('M104 '): #temp set lines
@@ -144,7 +144,6 @@ def process_single_file(fs):
 			output['fan_off'] += 1
 		elif cur_line.startswith('M106 '): #unretract lines
 			output['fan_on'] += 1
-				
 
 		output['num_lines_gcode'] += 1
 		cur_line = fs.readline()
