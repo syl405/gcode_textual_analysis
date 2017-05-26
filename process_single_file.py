@@ -2,6 +2,7 @@
 import re
 #TO-DO: Handle autohoming commands (G28s)
 #TO-DO: Record filament length extruded during purge separately from filament deposited on part
+#TO-DO: Figure out why total G-code line count is always 2 lines behind actual g-code line number in file.
 def process_single_file(fs):
 	'''Takes an NVPRO g-code file and outputs list of textual attributes. Also returns a naive estimate of print time based purely on moves.
 
@@ -26,6 +27,7 @@ def process_single_file(fs):
 	output = {'num_lines_gcode':0, #ok
 			  'num_lines_comment': 0, #ok
 			  'num_lines_move': 0, #ok
+			  'num_redundant_lines': 0, #ok
 			  'total_dist_move': 0, #ok
 			  'total_dist_print': 0, #ok
 			  'num_temp_changes': 0, #ok
@@ -73,10 +75,11 @@ def process_single_file(fs):
 					'F': 0, #current feedrate in mm/s
 					'E': 0, #current extrusion length in mm
 					'A': 3000, #current acceleration in mm/s^2, 3000 default
+					'mode': 0, #current mode, 0 for absolute, 1 for relative
 					'T': 0} #current temperature in degsC
 
 	#Pre-compiled regex patterns
-	move_pattern = '((?:X|Y|E|F)\d+\.?\d*)'
+	move_pattern = '((?:X|Y|Z|E|F)-?\d+\.?\d*)'
 	move_regex = re.compile(move_pattern)
 	temp_pattern = 'S(\d+\.?\d*)'
 	temp_regex = re.compile(temp_pattern)
@@ -112,8 +115,14 @@ def process_single_file(fs):
 					deltas[cur_axis] = cur_axis_dest - motion_params[cur_axis] #calculate relative motion
 				elif cur_axis == 'E':
 					motion_params['E'] = cur_axis_dest
-				motion_params[cur_axis] = cur_axis_dest #update machine position
-			cur_move_dist = ((deltas['X'])**2+(deltas['Y'])**2)**0.5 #pythagorean theorem
+
+				if motion_params['mode'] == 0:
+					motion_params[cur_axis] = cur_axis_dest #update machine position
+				elif motion_params['mode'] == 1:
+					otion_params[cur_axis] += cur_axis_dest #increment machine position
+				else:
+					raise NameError('Unexpected motion mode. Expecting 0 (abs) or 1 (rel).')
+			cur_move_dist = ((deltas['X'])**2+(deltas['Y'])**2+(deltas['Z'])**2)**0.5 #pythagorean theorem
 			output['total_dist_move'] += cur_move_dist
 			if motion_params['E']:
 				output['total_dist_print'] += cur_move_dist
@@ -122,7 +131,12 @@ def process_single_file(fs):
 
 			#calculate naive print time
 			if cur_move_dist <= 0:
-				print 'redundant move line'
+				output['num_redundant_lines'] += 1
+				print '\nredundant move line'
+				print output['num_lines_gcode']
+				print cur_line[0:-2]
+				print match_lists
+				print motion_params
 			elif cur_move_dist > motion_params['F']**2 / (2*motion_params['A']): #trapezoidal profile
 				print_time_this_move = ((2*motion_params['F'])/motion_params['A'])+((cur_move_dist-((motion_params['F'])**0.5/(motion_params['A'])))/(motion_params['F']))
 			else: #triangular profile
@@ -146,6 +160,10 @@ def process_single_file(fs):
 			output['num_fan_off'] += 1
 		elif cur_line.startswith('M106 '): #unretract lines
 			output['num_fan_on'] += 1
+		elif cur_line.startswith('G90 '): #absolute positioning lines
+			motion_params['mode'] = 0
+		elif cur_line.startswith('G91 '): #relative positioning lines
+			motion_params['mode'] = 1
 
 		output['num_lines_gcode'] += 1
 		cur_line = fs.readline()
