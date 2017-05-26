@@ -8,3 +8,6 @@ example_files/**
 *.csv
 *.xls
 *.xlsx
+
+#ignore gcode files
+*.gcode
