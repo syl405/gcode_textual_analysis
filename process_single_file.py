@@ -22,25 +22,25 @@ def process_single_file(fs):
 		raise NameError('G-code file is missing NVBOTS-generated header')
 
 	#Raw textual features
-	output = {'num_lines_gcode':2, #ok 
-			  'num_lines_comment': 2, #ok
-			  'num_bytes_gcode': 0, #ok, excluding comments
-			  'num_lines_move': 0, #ok
-			  'num_redundant_lines': 0, #ok
-			  'total_dist_move': 0, #ok
-			  'total_dist_print': 0, #ok
-			  'num_temp_changes': 0, #ok
+	output = {'num_lines_gcode':2, #start at 2 for lines used to validate args
+			  'num_lines_comment': 2, #start at 2 for lines used to validate args
+			  'num_bytes_gcode': 0, #excluding comments
+			  'num_lines_move': 0, #number of lines corresponding to G0/G1 motion
+			  'num_redundant_lines': 0, #number of G0/G1 motion lines that don't actually move
+			  'total_dist_move': 0, #total vector distance
+			  'total_dist_print': 0, #total vector distance moved while extruding
+			  'num_temp_changes': 0, #number of temperature sets
 			  'total_temp_increment': 0, #total degC increase (heating)
 			  'total_temp_decrement': 0, #total degC decreaes (cooling)
-			  'num_retract': 0, #ok
-			  'num_unretract': 0, #ok
-			  'total_length_extruded': 0, #ok
-			  'num_temp_checks': 0, #ok
-			  'num_fan_on': 0, #ok
-			  'num_fan_off': 0, #ok
-			  'num_purges': 0, #ok
-			  'total_dwell_time': 0, #ok
-			  'naive_print_time': 0} #ok
+			  'num_retract': 0, #number of filament retractions
+			  'num_unretract': 0, #number of filament un-retractions
+			  'total_length_extruded': 0, #total length of filament extruded
+			  'num_temp_checks': 0, #number of temperature checks
+			  'num_fan_on': 0, #number of times fan was turned on
+			  'num_fan_off': 0, #number of times fan was turned off
+			  'num_purges': 0, #number of times purge routine invoked
+			  'total_dwell_time': 0, #total time spent in forced waiting in s
+			  'naive_print_time': 0} #naive print time estimate from pure movement, assuming constant acceleration
 
 	#Raft and print parameters
 	seam_position = 0
