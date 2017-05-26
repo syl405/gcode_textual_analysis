@@ -1,8 +1,6 @@
 #!/usr/bin/python
 import re
 #TO-DO: Handle autohoming commands (G28s)
-#TO-DO: Record filament length extruded during purge separately from filament deposited on part
-#TO-DO: Figure out why total G-code line count is always 2 lines behind actual g-code line number in file.
 def process_single_file(fs):
 	'''Takes an NVPRO g-code file and outputs list of textual attributes. Also returns a naive estimate of print time based purely on moves.
 
@@ -24,13 +22,16 @@ def process_single_file(fs):
 		raise NameError('G-code file is missing NVBOTS-generated header')
 
 	#Raw textual features
-	output = {'num_lines_gcode':0, #ok
-			  'num_lines_comment': 0, #ok
+	output = {'num_lines_gcode':2, #ok 
+			  'num_lines_comment': 2, #ok
+			  'num_bytes_gcode': 0, #ok, excluding comments
 			  'num_lines_move': 0, #ok
 			  'num_redundant_lines': 0, #ok
 			  'total_dist_move': 0, #ok
 			  'total_dist_print': 0, #ok
 			  'num_temp_changes': 0, #ok
+			  'total_temp_increment': 0, #total degC increase (heating)
+			  'total_temp_decrement': 0, #total degC decreaes (cooling)
 			  'num_retract': 0, #ok
 			  'num_unretract': 0, #ok
 			  'total_length_extruded': 0, #ok
@@ -88,10 +89,10 @@ def process_single_file(fs):
 
 	#Read in header
 	cur_line = fs.readline() #read first line
-	while cur_line.startswith(';'): #exit when past initial block of comments
-		output['num_lines_gcode'] += 1
-		output['num_lines_comment'] += 1
-		cur_line = fs.readline() #read next line
+	#while cur_line.startswith(';'): #exit when past initial block of comments
+	#	output['num_lines_gcode'] += 1
+	#	output['num_lines_comment'] += 1
+	#	cur_line = fs.readline() #read next line
 
 	#Iterate through remainder of lines
 	while cur_line: #Exit loop when cur_line is empty, i.e. EOF
@@ -102,6 +103,7 @@ def process_single_file(fs):
 				in_purge = 1
 			elif cur_line == '; End move/purge/wipe gcode\n':
 				in_purge = 0
+			output['num_bytes_gcode'] -= len(cur_line)
 		elif cur_line.startswith('G0 ') or cur_line.startswith('G1 '): #move lines
 			motion_params['E'] = 0 #not extruding by default
 			deltas ={'X': 0, #x motion this line in mm
@@ -115,11 +117,10 @@ def process_single_file(fs):
 					deltas[cur_axis] = cur_axis_dest - motion_params[cur_axis] #calculate relative motion
 				elif cur_axis == 'E':
 					motion_params['E'] = cur_axis_dest
-
 				if motion_params['mode'] == 0:
 					motion_params[cur_axis] = cur_axis_dest #update machine position
 				elif motion_params['mode'] == 1:
-					otion_params[cur_axis] += cur_axis_dest #increment machine position
+					motion_params[cur_axis] += cur_axis_dest #increment machine position
 				else:
 					raise NameError('Unexpected motion mode. Expecting 0 (abs) or 1 (rel).')
 			cur_move_dist = ((deltas['X'])**2+(deltas['Y'])**2+(deltas['Z'])**2)**0.5 #pythagorean theorem
@@ -132,39 +133,39 @@ def process_single_file(fs):
 			#calculate naive print time
 			if cur_move_dist <= 0:
 				output['num_redundant_lines'] += 1
-				print '\nredundant move line'
-				print output['num_lines_gcode']
-				print cur_line[0:-2]
-				print match_lists
-				print motion_params
 			elif cur_move_dist > motion_params['F']**2 / (2*motion_params['A']): #trapezoidal profile
 				print_time_this_move = ((2*motion_params['F'])/motion_params['A'])+((cur_move_dist-((motion_params['F'])**0.5/(motion_params['A'])))/(motion_params['F']))
 			else: #triangular profile
-				#cusp_speed = (motion_params['A']*cur_move_dist)^0.5 (for reference only, close form solution)
 				print_time_this_move = (2*cur_move_dist)/((motion_params['A']*cur_move_dist)**0.5)
 			output['naive_print_time'] += print_time_this_move
-		elif cur_line.startswith('M105 '): #temp check lines
+		elif cur_line.startswith('M105 ')or cur_line.startswith('M105\n'): #temp check lines
 			output['num_temp_checks'] += 1
-		elif cur_line.startswith('M104 '): #temp set lines
+		elif cur_line.startswith('M104 ')or cur_line.startswith('M104\n'): #temp set lines
 			output['num_temp_changes'] += 1
-			motion_params['T'] = float(temp_regex.search(cur_line).group(1))
-		elif cur_line.startswith('M204 '): #acceleration set lines
+			temp_target = float(temp_regex.search(cur_line).group(1))
+			if motion_params['T'] < temp_target:
+				output['total_temp_increment'] += temp_target - motion_params['T']
+			else:
+				output['total_temp_decrement'] += motion_params['T'] - temp_target
+			motion_params['T'] = temp_target
+		elif cur_line.startswith('M204 ') or cur_line.startswith('M204\n') : #acceleration set lines
 			motion_params['A'] = float(temp_regex.search(cur_line).group(1))
-		elif cur_line.startswith('G10 '): #retract lines
+		elif cur_line.startswith('G10 ') or cur_line.startswith('G10\n'): #retract lines
 			output['num_retract'] += 1
-		elif cur_line.startswith('G11 '): #unretract lines
+		elif cur_line.startswith('G11 ') or cur_line.startswith('G11\n'): #unretract lines
 			output['num_unretract'] += 1
-		elif cur_line.startswith('G4 '): #waiting lines
-			output['total_dwell_time'] += float(dwell_regex.search(cur_line).group(1)*1000)
-		elif cur_line.startswith('M107 '): #fan off lines
+		elif cur_line.startswith('G4 ') or cur_line.startswith('G4\n'): #waiting lines
+			output['total_dwell_time'] += float(dwell_regex.search(cur_line).group(1))/1000
+		elif cur_line.startswith('M107 ') or cur_line.startswith('M107\n'): #fan off lines
 			output['num_fan_off'] += 1
-		elif cur_line.startswith('M106 '): #unretract lines
+		elif cur_line.startswith('M106 ') or cur_line.startswith('M106\n'): #fan on lines
 			output['num_fan_on'] += 1
-		elif cur_line.startswith('G90 '): #absolute positioning lines
+		elif cur_line.startswith('G90 ') or cur_line.startswith('G90\n'): #absolute positioning lines
 			motion_params['mode'] = 0
-		elif cur_line.startswith('G91 '): #relative positioning lines
+		elif cur_line.startswith('G91 ') or cur_line.startswith('G91\n'): #relative positioning lines
 			motion_params['mode'] = 1
 
 		output['num_lines_gcode'] += 1
+		output['num_bytes_gcode'] += len(cur_line)
 		cur_line = fs.readline()
 	return output
