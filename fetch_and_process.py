@@ -39,6 +39,7 @@ def fetch_and_process(list_file_path):
 		try:
 			gcode_stream = open('local_copy_gcode.gcode')
 			output = process_single_file(gcode_stream)
+			output['filename'] = key
 			output_dicts.append(output)
 			gcode_stream.close()
 		except:
