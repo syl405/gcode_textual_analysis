@@ -19,18 +19,23 @@ def fetch_and_process(list_file_path):
 
 	#load list file
 	list_file_stream = open(list_file_path)
-	list_file_reader = csv.DictReader(list_file_stream) #iterable object containing list of entries
+
+	#transforming into a list for easy enumeration, but could take a lot of memory for longer lists!
+	list_file_reader = list(csv.DictReader(list_file_stream))#iterable object containing list of entries
 
 	s3_client = boto3.client('s3', config=botocore.client.Config(signature_version='s3v4')) #create ClientObject, force signature version
 
+	#progress variables
+	current_file_index = 0
+	num_file_in_list = len(list_file_reader)
 
 	#iterate through list and download + process files
 	for entry in list_file_reader:
+		current_file_index += 1
 		key = entry['submission__gcode'] #retrieve file key (path) from correct column in csv file
-
+		print 'Processing file %d of %d' % (current_file_index, num_file_in_list)
 		#try to retrieve file from S3 bucket
 		try:
-			print key
 			s3_client.download_file(BUCKET_NAME, key, 'local_copy_gcode.gcode')
 		except botocore.exceptions.ClientError as e:
 			if e.response['Error']['Code'] == "404": #non-existent file
@@ -50,8 +55,6 @@ def fetch_and_process(list_file_path):
 			gcode_stream.close() #close gcode file stream
 		except: #catch errors from processing current g-code file
 			process_error_list.append(key) #save list of files that failed to process
-		#else:
-			#print 'successfully processed' #as progress indicator
 
 	list_file_stream.close()
 

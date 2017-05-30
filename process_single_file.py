@@ -216,7 +216,7 @@ def process_single_file(fs):
 	#calculate mean and median values
 	output['mean_move_dist'] = sum(move_dists)/len(move_dists)
 	output['median_move_dist'] = numpy.median(move_dists)
-	output['meean_print_dist'] = sum(print_dists)/len(print_dists)
+	output['mean_print_dist'] = sum(print_dists)/len(print_dists)
 	output['median_print_dist'] = numpy.median(print_dists)
 	output['mean_angle_between_moves'] = sum(angles_between_moves)/len(angles_between_moves)
 	output['median_angle_between_moves'] = numpy.median(angles_between_moves)

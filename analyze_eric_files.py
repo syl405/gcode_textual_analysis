@@ -9,14 +9,14 @@ access_log_path = 'logs/access_log_053017.txt'
 
 output_tuple = fetch_and_process(csv_path)
 
-output_dict = output_tuple[0]
+output_dicts = output_tuple[0]
 process_error_list = output_tuple[1]
 access_error_list = output_tuple[2]
 
 output_fs = open(data_output_path,'w')
-writer = csv.DictWriter(output_fs,output_dict.keys())
+writer = csv.DictWriter(output_fs,output_dicts[0].keys())
 writer.writeheader()
-writer.writerows(output_dict)
+writer.writerows(output_dicts)
 output_fs.close()
 
 process_log_fs = open(process_log_path,'w')
