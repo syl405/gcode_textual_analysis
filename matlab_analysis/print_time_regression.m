@@ -25,3 +25,8 @@ textual_data.observed_pt = actual_pts_training_set;
 
 lm = fitlm(textual_data(:,2:end),'interactions');
 
+%% Preliminary comparison between textual analysis model and simulator regression
+%(currently based only on in-set prediction, need validation set)
+sim_abs_errors = abs(exp_sim_model_guess-actual_pt);
+textual_abs_errors = abs(lm.Residuals.Raw);
+
