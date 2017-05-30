@@ -1,5 +1,8 @@
 #!/usr/bin/python
 import re
+import math
+import numpy
+import copy
 #TO-DO: Handle autohoming commands (G28s)
 def process_single_file(fs):
 	'''Takes an NVPRO g-code file and outputs list of textual attributes. Also returns a naive estimate of print time based purely on moves.
@@ -27,11 +30,16 @@ def process_single_file(fs):
 			  'num_bytes_gcode': 0, #excluding comments
 			  'num_lines_move': 0, #number of lines corresponding to G0/G1 motion
 			  'num_redundant_lines': 0, #number of G0/G1 motion lines that don't actually move
-			  'num_layers': 0, #number of layers in the print !!!!
-			  'mean_angle_between_moves': 0, #mean angle between successive linear moves, in radians !!!
-			  'median_angle_between_moves': 0, #median angle between successive linear moves, in radians !!!	
+			  'num_layers': 0, #number of layers in the print
+			  'total_angle_between_moves': 0, #total angle between successive linear moves, in radians
+			  'mean_angle_between_moves': 0, #mean angle between successive linear moves, in radians
+			  'median_angle_between_moves': 0, #median angle between successive linear moves, in radians	
 			  'total_dist_move': 0, #total vector distance
+			  'mean_move_dist': 0, #mean distance of a move
+			  'median_move_dist': 0, #mean distance of a move
 			  'total_dist_print': 0, #total vector distance moved while extruding
+			  'mean_print_dist': 0, #mean distance of a move
+			  'median_print_dist': 0, #mean distance of a move
 			  'num_temp_changes': 0, #number of temperature sets
 			  'total_temp_increment': 0, #total degC increase (heating)
 			  'total_temp_decrement': 0, #total degC decreaes (cooling)
@@ -82,6 +90,14 @@ def process_single_file(fs):
 					'mode': 0, #current mode, 0 for absolute, 1 for relative
 					'T': 0} #current temperature in degsC
 
+	#Variables to store individual move vectors
+	deltas ={'X': 0, #x motion this line in mm
+			 'Y': 0, #y motion this line in mm
+		     'Z': 0} #z motion this line in mm
+	deltas_old ={'X': 0, #x motion last line in mm
+				 'Y': 0, #y motion last line in mm
+				 'Z': 0} #z motion last line in mm
+
 	#Pre-compiled regex patterns
 	move_pattern = '((?:X|Y|Z|E|F)-?\d+\.?\d*)'
 	move_regex = re.compile(move_pattern)
@@ -92,11 +108,13 @@ def process_single_file(fs):
 
 	#Lists that are updated every iteration
 	angles_between_moves = [] #list of angles between moves, in rads
-	move_dists = [] #list of move distances, in mm
+	move_dists = [] #list of all move distances, in mm
+	print_dists = [] #list of printing move distances, in mm
 
 	cur_line = fs.readline() #read first line
 
 	#Iterate through remainder of lines
+
 	while cur_line: #Exit loop when cur_line is empty, i.e. EOF
 		if cur_line.startswith(';'):
 			output['num_lines_comment'] += 1
@@ -108,14 +126,9 @@ def process_single_file(fs):
 			output['num_bytes_gcode'] -= len(cur_line)
 		elif cur_line.startswith('G0 ') or cur_line.startswith('G1 '): #move lines
 			motion_params['E'] = 0 #not extruding by default
-			deltas ={'X': 0, #x motion this line in mm
-					 'Y': 0, #y motion this line in mm
-					 'Z': 0} #z motion this line in mm
-			deltas_old ={'X': 0, #x motion last line in mm
-						 'Y': 0, #y motion last line in mm
-					     'Z': 0} #z motion last line in mm
 			match_lists = move_regex.findall(cur_line)
-			deltas_old = deltas #save previous move vector before updating
+			deltas_old = copy.deepcopy(deltas) #save previous move vector before updating
+			deltas = {'X':0, 'Y':0, 'Z':0}
 			for i in match_lists:
 				cur_axis = i[0] #first character in string
 				cur_axis_dest = float(i[1:])
@@ -131,11 +144,34 @@ def process_single_file(fs):
 					raise NameError('Unexpected motion mode. Expecting 0 (abs) or 1 (rel).')
 			prev_move_dist = ((deltas_old['X'])**2+(deltas_old['Y'])**2+(deltas_old['Z'])**2)**0.5 #pythagorean theorem
 			cur_move_dist = ((deltas['X'])**2+(deltas['Y'])**2+(deltas['Z'])**2)**0.5 #pythagorean theorem
-			output['total_dist_move'] += cur_move_dist
-			move_dists.append(cur_move_dist)
+			move_dists.append(cur_move_dist) #append current move dist to list
+			output['total_dist_move'] += cur_move_dist #increment total distance moved by current move distance
+
+			prev_move_array = numpy.array([deltas_old['X'],deltas_old['Y'],deltas_old['Z']])
+			cur_move_array = numpy.array([deltas['X'],deltas['Y'],deltas['Z']])
+
+			#calculate angle change between moves
+			if cur_move_dist == 0 or prev_move_dist == 0:
+				cur_angle_change = 0
+			else:
+				#need to round float to prevent numerical accuracy issues with math.acos()
+				cur_angle_change = math.acos(round(numpy.inner(prev_move_array,cur_move_array)/(prev_move_dist*cur_move_dist),5))
+				angles_between_moves.append(cur_angle_change)
+				output['total_angle_between_moves'] += cur_angle_change
+
+			#check if current move is a print move
 			if motion_params['E']:
 				output['total_dist_print'] += cur_move_dist
+				print_dists.append(cur_move_dist) #append current move dist if it is a printing move
+
+			#check if current move is a pure Z move, i.e. layer change
+			if deltas['Z'] == cur_move_dist:
+				output['num_layers'] += 1
+
+			#increment total extruded length
 			output['total_length_extruded'] += motion_params['E']
+
+			#increment number of lines moved
 			output['num_lines_move'] += 1
 
 			#calculate naive print time
@@ -176,4 +212,14 @@ def process_single_file(fs):
 		output['num_lines_gcode'] += 1
 		output['num_bytes_gcode'] += len(cur_line)
 		cur_line = fs.readline()
+
+	#calculate mean and median values
+	output['mean_move_dist'] = sum(move_dists)/len(move_dists)
+	output['median_move_dist'] = numpy.median(move_dists)
+	output['meean_print_dist'] = sum(print_dists)/len(print_dists)
+	output['median_print_dist'] = numpy.median(print_dists)
+	output['mean_angle_between_moves'] = sum(angles_between_moves)/len(angles_between_moves)
+	output['median_angle_between_moves'] = numpy.median(angles_between_moves)
+
+
 	return output
