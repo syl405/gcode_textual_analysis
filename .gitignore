@@ -1,3 +1,11 @@
 #ignore compiled files
 *.pyc
 
+#ignore csv and excel files
+#*.csv
+#*.xls
+#*.xlsx
+
+#ignore gcode files
+#*.gcode
+
