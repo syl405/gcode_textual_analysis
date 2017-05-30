@@ -1,5 +1,7 @@
 #!/usr/bin/python
 import re
+import math
+import numpy
 #TO-DO: Handle autohoming commands (G28s)
 def process_single_file(fs):
 	'''Takes an NVPRO g-code file and outputs list of textual attributes. Also returns a naive estimate of print time based purely on moves.
@@ -27,6 +29,9 @@ def process_single_file(fs):
 			  'num_bytes_gcode': 0, #excluding comments
 			  'num_lines_move': 0, #number of lines corresponding to G0/G1 motion
 			  'num_redundant_lines': 0, #number of G0/G1 motion lines that don't actually move
+			  'num_layers': 0, #number of layers in the print !!!!
+			  'mean_angle_between_moves': 0, #mean angle between successive linear moves, in radians !!!
+			  'median_angle_between_moves': 0, #median angle between successive linear moves, in radians !!!	
 			  'total_dist_move': 0, #total vector distance
 			  'total_dist_print': 0, #total vector distance moved while extruding
 			  'num_temp_changes': 0, #number of temperature sets
@@ -87,12 +92,11 @@ def process_single_file(fs):
 	dwell_pattern = 'P(\d+\.?\d*)'
 	dwell_regex = re.compile(dwell_pattern)
 
-	#Read in header
+	#Lists that are updated every iteration
+	angles_between_moves = [] #list of angles between moves, in rads
+	move_dists = [] #list of move distances, in mm
+
 	cur_line = fs.readline() #read first line
-	#while cur_line.startswith(';'): #exit when past initial block of comments
-	#	output['num_lines_gcode'] += 1
-	#	output['num_lines_comment'] += 1
-	#	cur_line = fs.readline() #read next line
 
 	#Iterate through remainder of lines
 	while cur_line: #Exit loop when cur_line is empty, i.e. EOF
@@ -109,7 +113,11 @@ def process_single_file(fs):
 			deltas ={'X': 0, #x motion this line in mm
 					 'Y': 0, #y motion this line in mm
 					 'Z': 0} #z motion this line in mm
+			deltas_old ={'X': 0, #x motion last line in mm
+						 'Y': 0, #y motion last line in mm
+					     'Z': 0} #z motion last line in mm
 			match_lists = move_regex.findall(cur_line)
+			deltas_old = deltas #save previous move vector before updating
 			for i in match_lists:
 				cur_axis = i[0] #first character in string
 				cur_axis_dest = float(i[1:])
@@ -123,8 +131,14 @@ def process_single_file(fs):
 					motion_params[cur_axis] += cur_axis_dest #increment machine position
 				else:
 					raise NameError('Unexpected motion mode. Expecting 0 (abs) or 1 (rel).')
+			prev_move_dist = ((deltas_old['X'])**2+(deltas_old['Y'])**2+(deltas_old['Z'])**2)**0.5 #pythagorean theorem
 			cur_move_dist = ((deltas['X'])**2+(deltas['Y'])**2+(deltas['Z'])**2)**0.5 #pythagorean theorem
 			output['total_dist_move'] += cur_move_dist
+			angles_between_moves.append(math.acos(numpy.inner(numpy.array([deltas['X'], deltas['Y'], deltas['Z']],
+														 numpy.array([deltas_old['X'], deltas_old['Y'], deltas_old['Z']])))
+											 /(prev_mode_dist*cur_move_dist))
+									   )
+			move_dists.append(cur_move_dist)
 			if motion_params['E']:
 				output['total_dist_print'] += cur_move_dist
 			output['total_length_extruded'] += motion_params['E']
