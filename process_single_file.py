@@ -1,7 +1,5 @@
 #!/usr/bin/python
 import re
-import math
-import numpy
 #TO-DO: Handle autohoming commands (G28s)
 def process_single_file(fs):
 	'''Takes an NVPRO g-code file and outputs list of textual attributes. Also returns a naive estimate of print time based purely on moves.
@@ -134,10 +132,6 @@ def process_single_file(fs):
 			prev_move_dist = ((deltas_old['X'])**2+(deltas_old['Y'])**2+(deltas_old['Z'])**2)**0.5 #pythagorean theorem
 			cur_move_dist = ((deltas['X'])**2+(deltas['Y'])**2+(deltas['Z'])**2)**0.5 #pythagorean theorem
 			output['total_dist_move'] += cur_move_dist
-			angles_between_moves.append(math.acos(numpy.inner(numpy.array([deltas['X'], deltas['Y'], deltas['Z']],
-														 numpy.array([deltas_old['X'], deltas_old['Y'], deltas_old['Z']])))
-											 /(prev_mode_dist*cur_move_dist))
-									   )
 			move_dists.append(cur_move_dist)
 			if motion_params['E']:
 				output['total_dist_print'] += cur_move_dist
