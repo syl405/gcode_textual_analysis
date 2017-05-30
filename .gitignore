@@ -6,6 +6,6 @@
 #*.xls
 #*.xlsx
 
-#ignore gcode files
-#*.gcode
+#ignore temporary gcode files
+local_copy_gcode.gcode
 
