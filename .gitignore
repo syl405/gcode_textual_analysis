@@ -5,9 +5,9 @@ example_files/**
 *.pyc
 
 #ignore csv and excel files
-*.csv
-*.xls
-*.xlsx
+#*.csv
+#*.xls
+#*.xlsx
 
 #ignore gcode files
-*.gcode
+#*.gcode
