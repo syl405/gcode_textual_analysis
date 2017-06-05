@@ -1,3 +1,5 @@
+clear
+
 %% Parse in eric data
 raw_filename = '../eric_regression/print_time_regression_042317.xlsx';
 [~,~,raw_data] = xlsread(raw_filename, 'data_and_analysis', 'A2:AA1001','basic');
@@ -8,9 +10,9 @@ sim_pt_w_accel = cell2mat(raw_data(:,6));
 exp_sim_model_guess = cell2mat(raw_data(:,27))*60;
 
 %% Parse in textual analysis output
-raw_filename = '../analysis_output_052617.xlsx';
-[~,~,headers] = xlsread(raw_filename, 'analysis_output_052617', 'A1:T1','basic');
-[~,~,raw_data] = xlsread(raw_filename, 'analysis_output_052617', 'A2:T650','basic');
+raw_filename = '../feature_extraction_output/textual_analysis_output_053017.xlsx';
+[~,~,headers] = xlsread(raw_filename, 'textual_analysis_output_053017', 'A1:T1','basic');
+[~,~,raw_data] = xlsread(raw_filename, 'textual_analysis_output_053017', 'A2:T650','basic');
 textual_data = cell2table(raw_data,'VariableNames',headers);
 
 %% Discard duplicate points from textual data
@@ -27,9 +29,9 @@ lm = fitlm(textual_data(:,2:end),'interactions');
 
 %% Preliminary comparison between textual analysis model and simulator regression
 %(currently based only on in-set prediction, need validation set)
-sim_abs_errors = abs(exp_sim_model_guess-actual_pt);
-textual_abs_errors = abs(lm.Residuals.Raw);
+sim_abs_errors = abs(exp_sim_model_guess-actual_pt)/60; % in mins
+textual_abs_errors = abs(lm.Residuals.Raw)/60; % in mins
 
-sim_rev_errors = sim_abs_errors./actual_pt;
-textual_rev_errors = textual_abs_errors./textual_data.observed_pt;
+sim_rel_errors = sim_abs_errors*60./actual_pt;
+textual_rel_errors = textual_abs_errors*60./textual_data.observed_pt;
 
