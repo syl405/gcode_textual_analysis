@@ -33,7 +33,9 @@ def process_single_file(fs):
 			  'num_layers': 0, #number of layers in the print
 			  'total_angle_between_moves': 0, #total angle between successive linear moves, in radians
 			  'mean_angle_between_moves': 0, #mean angle between successive linear moves, in radians
-			  'median_angle_between_moves': 0, #median angle between successive linear moves, in radians	
+			  'median_angle_between_moves': 0, #median angle between successive linear moves, in radians
+			  'mean_filament_flow_rate': 0, #mean filament feed rate in mm filament/mm travel
+			  'median_filament_flow_rate': 0, #median filament feed rate in mm filament/mm travel
 			  'total_dist_move': 0, #total vector distance
 			  'mean_move_dist': 0, #mean distance of a move
 			  'median_move_dist': 0, #mean distance of a move
@@ -110,6 +112,7 @@ def process_single_file(fs):
 	angles_between_moves = [] #list of angles between moves, in rads
 	move_dists = [] #list of all move distances, in mm
 	print_dists = [] #list of printing move distances, in mm
+	filament_flow_rates = [] #list of filament flow rates of successive moves, in mm/mm
 
 	cur_line = fs.readline() #read first line
 
@@ -163,6 +166,9 @@ def process_single_file(fs):
 			if motion_params['E']:
 				output['total_dist_print'] += cur_move_dist
 				print_dists.append(cur_move_dist) #append current move dist if it is a printing move
+				if cur_move_dist != 0:
+					cur_filament_rate = motion_params['E'] / float(cur_move_dist)
+					filament_flow_rates.append(cur_filament_rate)
 
 			#check if current move is a pure Z move, i.e. layer change
 			if deltas['Z'] == cur_move_dist:
@@ -220,6 +226,8 @@ def process_single_file(fs):
 	output['median_print_dist'] = numpy.median(print_dists)
 	output['mean_angle_between_moves'] = sum(angles_between_moves)/len(angles_between_moves)
 	output['median_angle_between_moves'] = numpy.median(angles_between_moves)
+	output['mean_filament_flow_rate'] = sum(filament_flow_rates)/len(filament_flow_rates)
+	output['median_filament_flow_rate'] = numpy.median(filament_flow_rates)
 
 
 	return output
