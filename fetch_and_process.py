@@ -8,7 +8,7 @@ from process_single_file import process_single_file
 BUCKET_NAME = 'nvbots-production'
 
 def fetch_and_process(list_file_path):
-	'''
+	"""
 	takes a path pointing to a CSV file with a column titled 'submission__gcode' which contains S3 object keys pointing to individual g-code files,
 	downloads them from the nvbots-production bucket,
 	carries out textual analysis on each file,
@@ -26,7 +26,7 @@ def fetch_and_process(list_file_path):
 	Credentials:
 	- Requires the appropriate file access credentials to the nvbots-production bucket to be installed in a aws config file
 	- Uncomment and modify appropriate lines instantiating s3_client if using alternative credential setup (e.g. temporary credentials, OS keychain etc.)
-	'''
+	"""
 
 	#output variables
 	output_dicts = []

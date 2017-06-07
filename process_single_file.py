@@ -5,7 +5,7 @@ import numpy
 import copy
 #TO-DO: Handle autohoming commands (G28s)
 def process_single_file(fs):
-	'''
+	"""
 	Takes an NVPRO g-code file and outputs list of textual attributes. Also returns a naive estimate of print time based purely on moves.
 
 	Inputs: 
@@ -21,7 +21,7 @@ def process_single_file(fs):
 	- re
 	- math
 	- copy
-	'''
+	"""
 
 	#Validate argument
 	if not type(fs) is file:

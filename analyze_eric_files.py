@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-'''
+"""
 Quick script to automate retrieval and feature extraction on the files Eric used in his original simulation.
 - Accesses CSV file containing Eric's simulator regression data
 - Retrieves G-code files referenced in simulator regression CSV from S3 bucket
@@ -10,7 +10,7 @@ Quick script to automate retrieval and feature extraction on the files Eric used
 Package dependencies:
 - csv
 - fetch_and_process
-'''
+"""
 
 import csv
 from fetch_and_process import fetch_and_process
