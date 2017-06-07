@@ -39,13 +39,13 @@ def fetch_and_process(list_file_path):
 	#transforming into a list for easy enumeration, but could take a lot of memory for longer lists!
 	list_file_reader = list(csv.DictReader(list_file_stream))#iterable object containing list of entries
 
-	#s3_client = boto3.client('s3', config=botocore.client.Config(signature_version='s3v4')) #create ClientObject, force signature version
+	s3_client = boto3.client('s3', config=botocore.client.Config(signature_version='s3v4')) #create ClientObject, force signature version
 
 	#Uncomment following lines and modify accordingly if using alternative credential setup
-	s3_client = boto3.client('s3',
-							config=botocore.client.Config(signature_version='s3v4'),
-							aws_access_key_id='AKIAITAJHZLKWKI655QQ',
-							aws_secret_access_key='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')
+	#s3_client = boto3.client('s3',
+	#						config=botocore.client.Config(signature_version='s3v4'),
+	#						aws_access_key_id=ACCESS_KEY,
+	#						aws_secret_access_key=SECRET_KEY)
 
 	#progress variables
 	current_file_index = 0
