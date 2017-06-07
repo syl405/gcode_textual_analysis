@@ -5,7 +5,8 @@ import numpy
 import copy
 #TO-DO: Handle autohoming commands (G28s)
 def process_single_file(fs):
-	'''Takes an NVPRO g-code file and outputs list of textual attributes. Also returns a naive estimate of print time based purely on moves.
+	'''
+	Takes an NVPRO g-code file and outputs list of textual attributes. Also returns a naive estimate of print time based purely on moves.
 
 	Inputs: 
 	- NVPRO g-code file with .gcode suffix
@@ -14,6 +15,12 @@ def process_single_file(fs):
 	- dictionary containing features (aka predictor vars.), including a naive print time estimate for this observation
 		- keys: feature names
 		- values: value of feature for this observation
+
+	Package dependencies:
+	- numpy
+	- re
+	- math
+	- copy
 	'''
 
 	#Validate argument
@@ -219,7 +226,7 @@ def process_single_file(fs):
 		output['num_bytes_gcode'] += len(cur_line)
 		cur_line = fs.readline()
 
-	#calculate mean and median values
+	#calculate summary statistic values and write to output dict
 	output['mean_move_dist'] = sum(move_dists)/len(move_dists)
 	output['median_move_dist'] = numpy.median(move_dists)
 	output['mean_print_dist'] = sum(print_dists)/len(print_dists)

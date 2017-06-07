@@ -1,11 +1,24 @@
 #!/usr/bin/python
+
+'''
+Quick script to automate retrieval and feature extraction on the files Eric used in his original simulation.
+- Accesses CSV file containing Eric's simulator regression data
+- Retrieves G-code files referenced in simulator regression CSV from S3 bucket
+- Runs feature extraction on each file using fetch_and_process()
+- Writes extracted features to output CSV file
+
+Package dependencies:
+- csv
+- fetch_and_process
+'''
+
 import csv
 from fetch_and_process import fetch_and_process
 
 csv_path = 'eric_regression/print_time_regression_042317.csv'
-data_output_path = 'feature_extraction_output/textual_analysis_output_053017.csv'
-process_log_path = 'logs/process_log_053017.txt'
-access_log_path = 'logs/access_log_053017.txt'
+data_output_path = 'feature_extraction_output/textual_analysis_output_060717.csv'
+process_log_path = 'logs/process_log_060717.txt'
+access_log_path = 'logs/access_log_060717.txt'
 
 output_tuple = fetch_and_process(csv_path)
 
@@ -14,7 +27,7 @@ process_error_list = output_tuple[1]
 access_error_list = output_tuple[2]
 
 output_fs = open(data_output_path,'w')
-writer = csv.DictWriter(output_fs,output_dicts[0].keys())
+writer = csv.DictWriter(output_fs,output_dicts[0].keys(),lineterminator = '\n') #force line terminator to also work properly on Windows
 writer.writeheader()
 writer.writerows(output_dicts)
 output_fs.close()
