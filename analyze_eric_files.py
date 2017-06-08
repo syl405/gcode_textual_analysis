@@ -16,9 +16,9 @@ import csv
 from fetch_and_process import fetch_and_process
 
 csv_path = 'eric_regression/print_time_regression_042317.csv'
-data_output_path = 'feature_extraction_output/textual_analysis_output_060717.csv'
-process_log_path = 'logs/process_log_060717.txt'
-access_log_path = 'logs/access_log_060717.txt'
+data_output_path = 'feature_extraction_output/textual_analysis_output_060817.csv'
+process_log_path = 'logs/process_log_060817.txt'
+access_log_path = 'logs/access_log_060817.txt'
 
 output_tuple = fetch_and_process(csv_path)
 

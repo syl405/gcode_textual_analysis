@@ -76,6 +76,7 @@ def fetch_and_process(list_file_path):
 			output_dicts.append(output) #append dictionary to list
 			gcode_stream.close() #close gcode file stream
 		except: #catch errors from processing current g-code file
+			print('Unexpected processing error!') #misc. processing errors
 			process_error_list.append(key) #save list of files that failed to process
 
 	list_file_stream.close()

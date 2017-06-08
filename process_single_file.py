@@ -144,14 +144,17 @@ def process_single_file(fs):
 				cur_axis_dest = float(i[1:])
 				if cur_axis in ('X','Y','Z'):
 					deltas[cur_axis] = cur_axis_dest - motion_params[cur_axis] #calculate relative motion
+					if motion_params['mode'] == 0:
+						motion_params[cur_axis] = cur_axis_dest #update machine position
+					elif motion_params['mode'] == 1:
+						motion_params[cur_axis] += cur_axis_dest #increment machine position
+					else:
+						raise NameError('Unexpected motion mode. Expecting 0 (abs) or 1 (rel).')
 				elif cur_axis == 'E':
 					motion_params['E'] = cur_axis_dest
-				if motion_params['mode'] == 0:
-					motion_params[cur_axis] = cur_axis_dest #update machine position
-				elif motion_params['mode'] == 1:
-					motion_params[cur_axis] += cur_axis_dest #increment machine position
-				else:
-					raise NameError('Unexpected motion mode. Expecting 0 (abs) or 1 (rel).')
+				elif cur_axis == 'F':
+					motion_params['F'] = cur_axis_dest/60.0 #marlin specifies feedrate in mm/min, converting to mm/s
+				
 			prev_move_dist = ((deltas_old['X'])**2+(deltas_old['Y'])**2+(deltas_old['Z'])**2)**0.5 #pythagorean theorem
 			cur_move_dist = ((deltas['X'])**2+(deltas['Y'])**2+(deltas['Z'])**2)**0.5 #pythagorean theorem
 			move_dists.append(cur_move_dist) #append current move dist to list
@@ -212,7 +215,7 @@ def process_single_file(fs):
 		elif cur_line.startswith('G11 ') or cur_line.startswith('G11\n'): #unretract lines
 			output['num_unretract'] += 1
 		elif cur_line.startswith('G4 ') or cur_line.startswith('G4\n'): #waiting lines
-			output['total_dwell_time'] += float(dwell_regex.search(cur_line).group(1))/1000
+			output['total_dwell_time'] += float(dwell_regex.search(cur_line).group(1))/1000 #convert from ms to s
 		elif cur_line.startswith('M107 ') or cur_line.startswith('M107\n'): #fan off lines
 			output['num_fan_off'] += 1
 		elif cur_line.startswith('M106 ') or cur_line.startswith('M106\n'): #fan on lines
