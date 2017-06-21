@@ -25,7 +25,7 @@ textual_data = textual_data(index_to_keep,:);
 actual_pts_training_set = actual_pt(index_in_eric_data);
 textual_data.observed_pt = actual_pts_training_set;
 
-lm = fitlm(textual_data(:,2:end),'interactions');
+lm = fitlm([textual_data(:,1:12) textual_data(:,14:end)],'linear');
 
 %% Preliminary comparison between textual analysis model and simulator regression
 %(currently based only on in-set prediction, need validation set)
