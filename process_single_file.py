@@ -112,7 +112,7 @@ def process_single_file(fs):
 	move_regex = re.compile(move_pattern)
 	temp_pattern = 'S(\d+\.?\d*)'
 	temp_regex = re.compile(temp_pattern)
-	dwell_pattern = 'P(\d+\.?\d*)'
+	dwell_pattern = '((?:P|S)\d+\.?\d*)'
 	dwell_regex = re.compile(dwell_pattern)
 
 	#Lists that are updated every iteration
@@ -121,7 +121,7 @@ def process_single_file(fs):
 	print_dists = [] #list of printing move distances, in mm
 	filament_flow_rates = [] #list of filament flow rates of successive moves, in mm/mm
 
-	cur_line = fs.readline() #read first line
+	cur_line = fs.readline().lstrip(' ') #read first line
 
 	#Iterate through remainder of lines
 
@@ -153,7 +153,7 @@ def process_single_file(fs):
 				elif cur_axis == 'E':
 					motion_params['E'] = cur_axis_dest
 				elif cur_axis == 'F':
-					motion_params['F'] = cur_axis_dest/60.0 #marlin specifies feedrate in mm/min, converting to mm/s
+					motion_params['F'] = (cur_axis_dest/60.0)*0.7 #marlin specifies feedrate in mm/min, converting to mm/s
 				
 			prev_move_dist = ((deltas_old['X'])**2+(deltas_old['Y'])**2+(deltas_old['Z'])**2)**0.5 #pythagorean theorem
 			cur_move_dist = ((deltas['X'])**2+(deltas['Y'])**2+(deltas['Z'])**2)**0.5 #pythagorean theorem
@@ -215,7 +215,16 @@ def process_single_file(fs):
 		elif cur_line.startswith('G11 ') or cur_line.startswith('G11\n'): #unretract lines
 			output['num_unretract'] += 1
 		elif cur_line.startswith('G4 ') or cur_line.startswith('G4\n'): #waiting lines
-			output['total_dwell_time'] += float(dwell_regex.search(cur_line).group(1))/1000 #convert from ms to s
+			dwell_match_lists = dwell_regex.findall(cur_line)
+			total_dwell_this_line = 0
+			for match in dwell_match_lists:
+				cur_axis = match[0] #first letter, either P or S, denotes units of dwell specified
+				if cur_axis == 'P':
+					total_dwell_this_line += float(match[1:])/1000 #increment dwell time in ms
+				elif cur_axis == 'S':
+					total_dwell_this_line += float(match[1:]) #increment dwell time in s
+			output['total_dwell_time'] += total_dwell_this_line
+			output['naive_print_time'] += total_dwell_this_line
 		elif cur_line.startswith('M107 ') or cur_line.startswith('M107\n'): #fan off lines
 			output['num_fan_off'] += 1
 		elif cur_line.startswith('M106 ') or cur_line.startswith('M106\n'): #fan on lines
@@ -227,16 +236,16 @@ def process_single_file(fs):
 
 		output['num_lines_gcode'] += 1
 		output['num_bytes_gcode'] += len(cur_line)
-		cur_line = fs.readline()
+		cur_line = fs.readline().lstrip(' ') #read next line and strip leading whitespaces
 
 	#calculate summary statistic values and write to output dict
 	output['mean_move_dist'] = sum(move_dists)/len(move_dists)
 	output['median_move_dist'] = numpy.median(move_dists)
 	output['mean_print_dist'] = sum(print_dists)/len(print_dists)
 	output['median_print_dist'] = numpy.median(print_dists)
-	output['mean_angle_between_moves'] = sum(angles_between_moves)/len(angles_between_moves)
+	#output['mean_angle_between_moves'] = sum(angles_between_moves)/len(angles_between_moves)
 	output['median_angle_between_moves'] = numpy.median(angles_between_moves)
-	output['mean_filament_flow_rate'] = sum(filament_flow_rates)/len(filament_flow_rates)
+	#output['mean_filament_flow_rate'] = sum(filament_flow_rates)/len(filament_flow_rates)
 	output['median_filament_flow_rate'] = numpy.median(filament_flow_rates)
 
 
