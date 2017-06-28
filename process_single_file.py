@@ -194,7 +194,7 @@ def process_single_file(fs):
 			if cur_move_dist <= 0:
 				output['num_redundant_lines'] += 1
 			elif cur_move_dist > motion_params['F']**2 / (2*motion_params['A']): #trapezoidal profile
-				print_time_this_move = ((2*motion_params['F'])/motion_params['A'])+((cur_move_dist-((motion_params['F'])**0.5/(motion_params['A'])))/(motion_params['F']))
+				print_time_this_move = ((2*motion_params['F'])/motion_params['A'])+((cur_move_dist-((motion_params['F'])**2/(motion_params['A'])))/(motion_params['F']))
 			else: #triangular profile
 				print_time_this_move = (2*cur_move_dist)/((motion_params['A']*cur_move_dist)**0.5)
 			output['naive_print_time'] += print_time_this_move
